@@ -1,0 +1,15 @@
+{
+  "lines": [
+    {"id": "hook",  "scene": "hook",   "text": "Rupiah baru saja mencetak rekor terlemah sepanjang sejarah."},
+    {"id": "level", "scene": "level",  "text": "Senin ini, satu dolar Amerika tembus delapan belas ribu dua ratus tujuh puluh rupiah.", "caption": "Senin ini, satu dolar Amerika tembus Rp18.270."},
+    {"id": "ytd",   "scene": "ytd",    "text": "Sejak awal tahun, rupiah sudah melemah lebih dari delapan persen."},
+    {"id": "why0",  "scene": "why",    "text": "Kenapa? Ada tiga pemicu."},
+    {"id": "why1",  "scene": "why",    "text": "Satu, pasar takut The Fed menaikkan suku bunga."},
+    {"id": "why2",  "scene": "why",    "text": "Dua, investor melepas surat utang Indonesia."},
+    {"id": "why3",  "scene": "why",    "text": "Tiga, ancaman MSCI menurunkan status pasar saham kita."},
+    {"id": "impact","scene": "impact", "text": "Efeknya ke kamu? Barang impor, dari gadget sampai bahan baku, bisa makin mahal."},
+    {"id": "proj",  "scene": "proj",   "text": "Ekonom memperkirakan rupiah bisa menyentuh delapan belas ribu lima ratus.", "caption": "Ekonom memperkirakan rupiah bisa menyentuh Rp18.500."},
+    {"id": "bi",    "scene": "bi",     "text": "Sekarang semua mata tertuju ke rapat Bank Indonesia, tujuh belas dan delapan belas November.", "caption": "Sekarang semua mata tertuju ke rapat Bank Indonesia, 17 dan 18 November."},
+    {"id": "cta",   "scene": "cta",    "text": "Menurut kamu, rupiah bakal balik menguat, atau lanjut melemah? Komen di bawah."}
+  ]
+}

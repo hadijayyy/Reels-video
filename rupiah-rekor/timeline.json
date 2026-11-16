@@ -1,0 +1,128 @@
+{
+ "fps": 30,
+ "duration": 44.693,
+ "scenes": [
+  {
+   "name": "hook",
+   "start": 0,
+   "end": 3.63
+  },
+  {
+   "name": "level",
+   "start": 3.63,
+   "end": 8.486
+  },
+  {
+   "name": "ytd",
+   "start": 8.486,
+   "end": 12.308
+  },
+  {
+   "name": "why",
+   "start": 12.308,
+   "end": 24.286
+  },
+  {
+   "name": "impact",
+   "start": 24.286,
+   "end": 29.557
+  },
+  {
+   "name": "proj",
+   "start": 29.557,
+   "end": 33.608
+  },
+  {
+   "name": "bi",
+   "start": 33.608,
+   "end": 38.669
+  },
+  {
+   "name": "cta",
+   "start": 38.669,
+   "end": 44.693
+  }
+ ],
+ "clips": [
+  {
+   "id": "hook",
+   "scene": "hook",
+   "text": "Rupiah baru saja mencetak rekor terlemah sepanjang sejarah.",
+   "start": 0.3,
+   "dur": 3.35
+  },
+  {
+   "id": "level",
+   "scene": "level",
+   "text": "Senin ini, satu dolar Amerika tembus delapan belas ribu dua ratus tujuh puluh rupiah.",
+   "caption": "Senin ini, satu dolar Amerika tembus Rp18.270.",
+   "start": 3.81,
+   "dur": 4.697
+  },
+  {
+   "id": "ytd",
+   "scene": "ytd",
+   "text": "Sejak awal tahun, rupiah sudah melemah lebih dari delapan persen.",
+   "start": 8.666,
+   "dur": 3.662
+  },
+  {
+   "id": "why0",
+   "scene": "why",
+   "text": "Kenapa? Ada tiga pemicu.",
+   "start": 12.488,
+   "dur": 1.848
+  },
+  {
+   "id": "why1",
+   "scene": "why",
+   "text": "Satu, pasar takut The Fed menaikkan suku bunga.",
+   "start": 14.496,
+   "dur": 2.897
+  },
+  {
+   "id": "why2",
+   "scene": "why",
+   "text": "Dua, investor melepas surat utang Indonesia.",
+   "start": 17.553,
+   "dur": 2.851
+  },
+  {
+   "id": "why3",
+   "scene": "why",
+   "text": "Tiga, ancaman MSCI menurunkan status pasar saham kita.",
+   "start": 20.565,
+   "dur": 3.742
+  },
+  {
+   "id": "impact",
+   "scene": "impact",
+   "text": "Efeknya ke kamu? Barang impor, dari gadget sampai bahan baku, bisa makin mahal.",
+   "start": 24.466,
+   "dur": 5.111
+  },
+  {
+   "id": "proj",
+   "scene": "proj",
+   "text": "Ekonom memperkirakan rupiah bisa menyentuh delapan belas ribu lima ratus.",
+   "caption": "Ekonom memperkirakan rupiah bisa menyentuh Rp18.500.",
+   "start": 29.737,
+   "dur": 3.891
+  },
+  {
+   "id": "bi",
+   "scene": "bi",
+   "text": "Sekarang semua mata tertuju ke rapat Bank Indonesia, tujuh belas dan delapan belas November.",
+   "caption": "Sekarang semua mata tertuju ke rapat Bank Indonesia, 17 dan 18 November.",
+   "start": 33.788,
+   "dur": 4.901
+  },
+  {
+   "id": "cta",
+   "scene": "cta",
+   "text": "Menurut kamu, rupiah bakal balik menguat, atau lanjut melemah? Komen di bawah.",
+   "start": 38.849,
+   "dur": 4.944
+  }
+ ]
+}

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Rupiah rekor terlemah — reel</title>
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: 1080px; height: 1920px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Deterministic, time-driven canvas reel. window.renderFrame(t) draws the frame at t seconds.
+const W = 1080, H = 1920, CX = 525;           // CX nudged left of centre: TikTok's button rail sits on the right
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const C = { bg: '#070B16', ink: '#F5F7FF', dim: '#8E97B3', red: '#FF3B4E', amber: '#FFD23F', green: '#2EE6A0', card: '#121A2E', line: '#243050' };
+const F = (w, s) => `${w} ${s}px "Inter Display", "Inter", sans-serif`;
+let TL = null;
+
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, d) => clamp((t - a) / d);
+const eOut = x => 1 - Math.pow(1 - x, 3);
+const eOut5 = x => 1 - Math.pow(1 - x, 5);
+const eIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eBack = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const idNum = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+function text(str, x, y, font, color, o = {}) {
+  g.save();
+  g.font = font; g.fillStyle = color;
+  g.textAlign = o.align || 'center'; g.textBaseline = o.base || 'middle';
+  if (o.ls !== undefined) g.letterSpacing = o.ls + 'px';
+  g.globalAlpha *= o.a === undefined ? 1 : o.a;
+  if (o.glow) { g.shadowColor = o.glow; g.shadowBlur = o.blur || 40; }
+  g.fillText(str, x, y);
+  g.restore();
+}
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+// pop: scale+fade an element around a pivot
+function pop(p, px, py, fn, from = 0.7) {
+  if (p <= 0) return;
+  g.save();
+  const s = lerp(from, 1, eBack(p));
+  g.translate(px, py); g.scale(s, s); g.translate(-px, -py);
+  g.globalAlpha *= clamp(p * 2.5);
+  fn(); g.restore();
+}
+function rise(p, dy, fn) {
+  if (p <= 0) return;
+  g.save(); g.translate(0, (1 - eOut5(p)) * dy); g.globalAlpha *= clamp(p * 2); fn(); g.restore();
+}
+
+// ---------------- background ----------------
+const chartPts = (() => {            // stylised falling line used as a motif (illustrative, not data)
+  const pts = []; let y = 0;
+  for (let i = 0; i <= 60; i++) { y += (rnd(i) - 0.36) * 0.06 + (i > 40 ? 0.012 : 0); pts.push(y); }
+  const mn = Math.min(...pts), mx = Math.max(...pts);
+  return pts.map(v => (v - mn) / (mx - mn));
+})();
+function drawChart(x, y, w, h, p, color, lw = 8, fill = true) {
+  const n = chartPts.length - 1, upto = p * n;
+  g.save();
+  g.beginPath();
+  let lx = x, ly = y;
+  for (let i = 0; i <= Math.floor(upto); i++) { lx = x + w * i / n; ly = y + h * chartPts[i]; i ? g.lineTo(lx, ly) : g.moveTo(lx, ly); }
+  const fr = upto - Math.floor(upto), i0 = Math.floor(upto);
+  if (i0 < n) { lx = x + w * (i0 + fr) / n; ly = y + h * lerp(chartPts[i0], chartPts[i0 + 1], fr); g.lineTo(lx, ly); }
+  g.strokeStyle = color; g.lineWidth = lw; g.lineJoin = 'round'; g.lineCap = 'round';
+  g.shadowColor = color; g.shadowBlur = 30; g.stroke();
+  if (fill) {
+    g.shadowBlur = 0; g.lineTo(lx, y + h + 60); g.lineTo(x, y + h + 60); g.closePath();
+    const gr = g.createLinearGradient(0, y, 0, y + h + 60);
+    gr.addColorStop(0, color + '44'); gr.addColorStop(1, color + '00');
+    g.fillStyle = gr; g.fill();
+  }
+  g.restore();
+  return [lx, ly];
+}
+function background(t, heat) {
+  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+  let gr = g.createRadialGradient(W * .5, H * .38, 0, W * .5, H * .38, 1100);
+  gr.addColorStop(0, `rgba(255,59,78,${0.10 + 0.14 * heat})`); gr.addColorStop(.55, 'rgba(30,50,120,0.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  // drifting grid
+  g.save(); g.strokeStyle = 'rgba(120,140,200,0.07)'; g.lineWidth = 2;
+  const off = (t * 28) % 120;
+  for (let y = -120 + off; y < H; y += 120) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  for (let x = 60; x < W; x += 120) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  g.restore();
+  // falling ticker glyphs
+  g.save();
+  for (let i = 0; i < 16; i++) {
+    const sp = 60 + rnd(i) * 110, x = 40 + rnd(i + 50) * (W - 80), y = ((rnd(i + 9) * H + t * sp) % (H + 200)) - 100;
+    text(i % 3 ? '▼' : 'Rp', x, y, F(800, 26 + rnd(i + 3) * 26), C.red, { a: 0.10 + rnd(i + 20) * 0.12 });
+  }
+  g.restore();
+  // vignette
+  gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(.16, 'rgba(0,0,0,0)'); gr.addColorStop(.72, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.75)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+}
+function topChip(t) {
+  const y = 250, w = 470, x = CX - w / 2;
+  g.save();
+  rr(x, y - 34, w, 68, 34); g.fillStyle = 'rgba(255,59,78,0.14)'; g.fill();
+  g.strokeStyle = 'rgba(255,59,78,0.6)'; g.lineWidth = 2.5; g.stroke();
+  g.beginPath(); g.arc(x + 42, y, 11, 0, 7); g.fillStyle = C.red; g.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(t * 4)); g.fill();
+  g.globalAlpha = 1;
+  text('KABAR EKONOMI · 16 NOV 2026', x + 70, y + 2, F(800, 25), C.ink, { align: 'left', ls: 1.5 });
+  g.restore();
+}
+
+// ---------------- scenes (lt = local time, d = scene duration) ----------------
+const S = {};
+
+S.hook = (lt) => {
+  const p0 = prog(lt, 0.9, 2.6);
+  g.save(); g.globalAlpha = 0.55; drawChart(-40, 380, W + 80, 900, eIO(p0), C.red, 10); g.restore();
+  // RUPIAH slam
+  const p1 = prog(lt, 0.25, 0.38);
+  if (p1 > 0) {
+    g.save();
+    const s = lerp(2.6, 1, eOut5(p1));
+    g.translate(CX, 660); g.scale(s, s); g.globalAlpha = clamp(p1 * 3);
+    text('RUPIAH', 0, 0, F(900, 232), C.ink, { ls: -6, glow: 'rgba(255,255,255,.35)' });
+    g.restore();
+  }
+  // stamp
+  const p2 = prog(lt, 0.95, 0.3);
+  if (p2 > 0) {
+    g.save();
+    const s = lerp(2.2, 1, eOut5(p2));
+    g.translate(CX, 880); g.rotate(-0.055); g.scale(s, s); g.globalAlpha = clamp(p2 * 3);
+    rr(-430, -82, 860, 164, 18); g.fillStyle = C.red; g.shadowColor = C.red; g.shadowBlur = 60; g.fill();
+    g.shadowBlur = 0;
+    text('REKOR TERLEMAH', 0, 4, F(900, 92), '#fff', { ls: -1 });
+    g.restore();
+  }
+  rise(prog(lt, 1.85, 0.5), 60, () => text('SEPANJANG SEJARAH', CX, 1050, F(800, 62), C.amber, { ls: 8 }));
+  rise(prog(lt, 2.5, 0.5), 40, () => text('terhadap dolar AS', CX, 1140, F(600, 40), C.dim));
+};
+
+S.level = (lt) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => text('US$1  =', CX, 560, F(800, 92), C.dim, { ls: 2 }));
+  const pr = prog(lt, 1.3, 1.95), locked = lt >= 3.25;
+  const val = locked ? 18270 : lerp(18000, 18270, eOut(pr)) + (pr > 0 && pr < 1 ? rnd(Math.floor(lt * 30)) * 9 : 0);
+  const pin = prog(lt, 0.45, 0.4);
+  pop(pin, CX, 760, () => {
+    const pl = prog(lt, 3.25, 0.45), sc = 1 + 0.10 * Math.sin(pl * Math.PI);
+    g.save(); g.translate(CX, 760); g.scale(sc, sc);
+    text('Rp' + idNum(val), 0, 0, F(900, 184), locked ? C.red : C.ink, { ls: -5, glow: locked ? 'rgba(255,59,78,.7)' : 'rgba(255,255,255,.2)', blur: 60 });
+    g.restore();
+  });
+  // underline sweep
+  const pu = eOut5(prog(lt, 3.25, 0.5));
+  if (pu > 0) { g.save(); g.fillStyle = C.red; rr(CX - 400, 878, 800 * pu, 12, 6); g.fill(); g.restore(); }
+  pop(prog(lt, 3.4, 0.4), CX, 990, () => {
+    g.save(); rr(CX - 290, 945, 580, 90, 45); g.fillStyle = C.red; g.fill();
+    text('REKOR TERENDAH', CX, 993, F(900, 46), '#fff', { ls: 3 }); g.restore();
+  });
+  rise(prog(lt, 3.8, 0.4), 40, () => {
+    text('▼ 0,41% dalam sehari', CX, 1110, F(800, 48), C.amber);
+    text('Senin, 16 Nov 2026 · data Bloomberg', CX, 1190, F(500, 34), C.dim);
+  });
+};
+
+S.ytd = (lt) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => text('SEJAK AWAL 2026', CX, 500, F(800, 60), C.dim, { ls: 7 }));
+  const pc = eOut(prog(lt, 0.4, 1.7)), v = (8.64 * pc).toFixed(2).replace('.', ',');
+  pop(prog(lt, 0.35, 0.4), CX, 700, () => text('−' + v + '%', CX, 700, F(900, 236), C.red, { ls: -8, glow: 'rgba(255,59,78,.6)', blur: 70 }));
+  // chart card
+  rise(prog(lt, 0.7, 0.5), 80, () => {
+    g.save();
+    rr(CX - 430, 880, 860, 400, 36); g.fillStyle = C.card; g.fill(); g.strokeStyle = C.line; g.lineWidth = 3; g.stroke();
+    g.beginPath(); rr(CX - 430, 880, 860, 400, 36); g.clip();
+    const [ex, ey] = drawChart(CX - 380, 940, 760, 250, eIO(prog(lt, 0.9, 1.9)), C.red, 9);
+    g.beginPath(); g.arc(ex, ey, 14 + 5 * Math.sin(lt * 9), 0, 7); g.fillStyle = '#fff'; g.shadowColor = C.red; g.shadowBlur = 30; g.fill();
+    g.restore();
+    text('RUPIAH vs DOLAR AS', CX - 390, 925, F(800, 28), C.dim, { align: 'left', ls: 2 });
+    text('ilustrasi tren', CX + 390, 1250, F(500, 24), C.dim, { align: 'right', a: .8 });
+  });
+};
+
+const WHY = [
+  ['The Fed', 'Pasar takut suku bunga AS naik'],
+  ['Surat utang dilepas', 'Investor kurangi aset rupiah'],
+  ['Ancaman MSCI', 'Status pasar saham RI bisa turun'],
+];
+S.why = (lt, d, sc) => {
+  const clips = TL.clips.filter(c => c.scene === 'why').map(c => c.start - sc.start);
+  pop(prog(lt, 0.12, 0.4), CX, 470, () => text('KENAPA?', CX, 470, F(900, 170), C.amber, { ls: -4, glow: 'rgba(255,210,63,.45)' }));
+  rise(prog(lt, 0.9, 0.4), 40, () => text('3 PEMICU UTAMA', CX, 600, F(800, 44), C.dim, { ls: 8 }));
+  WHY.forEach(([title, sub], i) => {
+    const st = clips[i + 1] - 0.05, p = prog(lt, st, 0.42);
+    if (p <= 0) return;
+    const nextSt = i < 2 ? clips[i + 2] - 0.05 : 1e9;
+    const active = lt < nextSt, dimP = active ? 0 : eOut(prog(lt, nextSt, 0.3));
+    const y = 700 + i * 222, x = CX - 430, w = 860, h = 190;
+    g.save();
+    g.translate((1 - eOut5(p)) * 700, 0);
+    g.globalAlpha *= clamp(p * 2) * lerp(1, 0.5, dimP);
+    const s = lerp(1.035, 1, dimP); g.translate(CX, y + h / 2); g.scale(s, s); g.translate(-CX, -(y + h / 2));
+    rr(x, y, w, h, 32); g.fillStyle = C.card; g.fill();
+    g.strokeStyle = active ? C.red : C.line; g.lineWidth = active ? 5 : 3;
+    if (active) { g.shadowColor = C.red; g.shadowBlur = 36; } g.stroke(); g.shadowBlur = 0;
+    rr(x + 30, y + 35, 120, 120, 28); g.fillStyle = active ? C.red : '#2A3555'; g.fill();
+    text(String(i + 1), x + 90, y + 99, F(900, 84), '#fff');
+    text(title, x + 185, y + 70, F(900, 56), C.ink, { align: 'left', ls: -1 });
+    text(sub, x + 185, y + 135, F(500, 36), C.dim, { align: 'left' });
+    g.restore();
+  });
+};
+
+function icon(kind, x, y, col) {
+  g.save(); g.translate(x, y); g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 8; g.lineJoin = 'round'; g.lineCap = 'round';
+  if (kind === 'phone') { rr(-34, -62, 68, 124, 14); g.stroke(); g.beginPath(); g.arc(0, 42, 6, 0, 7); g.fill(); g.beginPath(); g.moveTo(-10, -44); g.lineTo(10, -44); g.stroke(); }
+  if (kind === 'box') { g.beginPath(); g.moveTo(0, -60); g.lineTo(56, -30); g.lineTo(56, 34); g.lineTo(0, 64); g.lineTo(-56, 34); g.lineTo(-56, -30); g.closePath(); g.stroke(); g.beginPath(); g.moveTo(-56, -30); g.lineTo(0, 0); g.lineTo(56, -30); g.moveTo(0, 0); g.lineTo(0, 64); g.stroke(); }
+  if (kind === 'ship') { g.beginPath(); g.moveTo(-64, 18); g.lineTo(64, 18); g.lineTo(46, 54); g.lineTo(-46, 54); g.closePath(); g.stroke(); rr(-40, -22, 34, 34, 4); g.stroke(); rr(4, -22, 34, 34, 4); g.stroke(); rr(-18, -62, 34, 34, 4); g.stroke(); }
+  g.restore();
+}
+S.impact = (lt) => {
+  pop(prog(lt, 0.12, 0.4), CX, 480, () => {
+    text('EFEKNYA', CX, 420, F(900, 120), C.ink, { ls: -3 });
+    text('KE KAMU?', CX, 548, F(900, 120), C.amber, { ls: -3, glow: 'rgba(255,210,63,.4)' });
+  });
+  const items = [['phone', 'Gadget', 1.9], ['box', 'Bahan baku', 2.8], ['ship', 'Barang impor', 1.3]];
+  const order = [2, 0, 1];
+  order.forEach((ix, k) => {
+    const [ic, label, st] = items[ix], p = prog(lt, st, 0.42), x = CX - 290 + k * 290, y = 800;
+    pop(p, x, y, () => {
+      g.save();
+      rr(x - 130, y - 150, 260, 330, 32); g.fillStyle = C.card; g.fill(); g.strokeStyle = C.line; g.lineWidth = 3; g.stroke();
+      icon(ic, x, y - 50, C.ink);
+      text(label, x, y + 62, F(800, 36), C.ink);
+      const bob = Math.sin((lt - st) * 6) * 5;
+      text('▲ harga', x, y + 122 - bob, F(800, 34), C.red);
+      g.restore();
+    });
+  });
+  const pm = prog(lt, 3.75, 0.4);
+  pop(pm, CX, 1120, () => {
+    g.save(); g.translate(CX, 1120); g.rotate(-0.03);
+    rr(-420, -80, 840, 160, 20); g.fillStyle = C.amber; g.shadowColor = C.amber; g.shadowBlur = 50; g.fill(); g.shadowBlur = 0;
+    text('BISA MAKIN MAHAL', 0, 4, F(900, 80), '#10131F', { ls: -1 });
+    g.restore();
+  }, 1.6);
+};
+
+S.proj = (lt) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => text('PROYEKSI EKONOM', CX, 480, F(800, 58), C.dim, { ls: 7 }));
+  pop(prog(lt, 1.5, 0.4), CX, 680, () => text('Rp18.500?', CX, 680, F(900, 176), C.amber, { ls: -5, glow: 'rgba(255,210,63,.55)', blur: 60 }));
+  // track
+  rise(prog(lt, 0.4, 0.45), 60, () => {
+    const x0 = CX - 380, x1 = CX + 380, y = 960, pm = eIO(prog(lt, 0.8, 2.0));
+    g.save();
+    g.lineCap = 'round'; g.lineWidth = 18; g.strokeStyle = '#243050'; g.beginPath(); g.moveTo(x0, y); g.lineTo(x1, y); g.stroke();
+    const gr = g.createLinearGradient(x0, 0, x1, 0); gr.addColorStop(0, C.red); gr.addColorStop(1, C.amber);
+    g.strokeStyle = gr; g.shadowColor = C.red; g.shadowBlur = 30; g.beginPath(); g.moveTo(x0, y); g.lineTo(lerp(x0, x1, pm), y); g.stroke();
+    g.shadowBlur = 0;
+    g.beginPath(); g.arc(lerp(x0, x1, pm), y, 26, 0, 7); g.fillStyle = '#fff'; g.fill();
+    g.beginPath(); g.arc(x1, y, 34 + 6 * Math.sin(lt * 7), 0, 7); g.strokeStyle = C.amber; g.lineWidth = 5; g.stroke();
+    g.restore();
+    text('Rp18.270', x0, y + 80, F(800, 44), C.ink, { align: 'left' });
+    text('sekarang', x0, y + 130, F(500, 32), C.dim, { align: 'left' });
+    text('Rp18.500', x1, y + 80, F(800, 44), C.amber, { align: 'right' });
+    text('proyeksi', x1, y + 130, F(500, 32), C.dim, { align: 'right' });
+  });
+  rise(prog(lt, 2.2, 0.45), 40, () => text('Proyeksi Bank Permata & BNP Paribas', CX, 1220, F(600, 38), C.dim));
+};
+
+S.bi = (lt) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => text('SEMUA MATA KE', CX, 450, F(800, 58), C.dim, { ls: 7 }));
+  pop(prog(lt, 0.5, 0.4), CX, 570, () => text('BANK INDONESIA', CX, 570, F(900, 104), C.ink, { ls: -2 }));
+  pop(prog(lt, 1.9, 0.45), CX, 900, () => {
+    g.save();
+    rr(CX - 300, 700, 600, 430, 40); g.fillStyle = '#F5F7FF'; g.shadowColor = 'rgba(0,0,0,.6)'; g.shadowBlur = 60; g.shadowOffsetY = 20; g.fill();
+    g.shadowColor = 'transparent';
+    g.beginPath(); g.roundRect(CX - 300, 700, 600, 120, [40, 40, 0, 0]); g.fillStyle = C.red; g.fill();
+    text('NOVEMBER 2026', CX, 762, F(900, 50), '#fff', { ls: 5 });
+    text('17–18', CX, 975, F(900, 220), '#10131F', { ls: -8 });
+    g.restore();
+  });
+  rise(prog(lt, 2.7, 0.45), 40, () => {
+    text('Rapat Dewan Gubernur BI', CX, 1200, F(800, 46), C.amber);
+    text('keputusan suku bunga', CX, 1262, F(500, 36), C.dim);
+  });
+};
+
+S.cta = (lt) => {
+  pop(prog(lt, 0.12, 0.4), CX, 470, () => text('MENURUT KAMU?', CX, 470, F(900, 104), C.ink, { ls: -2 }));
+  const btn = (p, y, col, label, arrow, ph) => pop(p, CX, y, () => {
+    const s = 1 + 0.035 * Math.sin(lt * 5 + ph);
+    g.save(); g.translate(CX, y); g.scale(s, s);
+    rr(-400, -100, 800, 200, 40); g.fillStyle = col + '22'; g.fill(); g.strokeStyle = col; g.lineWidth = 6; g.shadowColor = col; g.shadowBlur = 40; g.stroke(); g.shadowBlur = 0;
+    text(arrow, -290, 4, F(900, 90), col);
+    text(label, 50, 4, F(900, 92), col, { ls: -1 });
+    g.restore();
+  });
+  btn(prog(lt, 1.5, 0.4), 700, C.green, 'MENGUAT', '▲', 0);
+  rise(prog(lt, 2.2, 0.3), 20, () => text('atau', CX, 835, F(700, 44), C.dim));
+  btn(prog(lt, 2.5, 0.4), 970, C.red, 'MELEMAH', '▼', 2);
+  rise(prog(lt, 3.6, 0.4), 40, () => {
+    const b = Math.abs(Math.sin(lt * 5)) * 14;
+    text('KOMEN DI BAWAH', CX - 30, 1170, F(900, 60), C.amber, { ls: 3 });
+    text('↓', CX + 300, 1170 + b, F(900, 70), C.amber);
+  });
+  rise(prog(lt, 1.0, 0.5), 20, () => {
+    text('Sumber: Bloomberg Technoz, Finansial Insight, J5newsroom (16/11/2026)', CX, 1270, F(500, 26), C.dim, { a: .9 });
+    text('Bukan saran keuangan', CX, 1304, F(500, 26), C.dim, { a: .9 });
+  });
+};
+
+// ---------------- captions (word-highlighted) ----------------
+const WEIGHT = { 'Rp18.270.': 34, 'Rp18.500.': 24, '17': 10, '18': 13, 'MSCI': 9 };
+function buildCaptions() {
+  for (const c of TL.clips) {
+    const words = (c.caption || c.text).split(' ');
+    const wts = words.map(w => (WEIGHT[w] || w.length) + 1.2 + (/[,?.]$/.test(w) ? 2.5 : 0));
+    const tot = wts.reduce((a, b) => a + b, 0);
+    let acc = 0;
+    const timed = words.map((w, i) => { const s = c.start + c.dur * acc / tot; acc += wts[i]; return { w, s, e: c.start + c.dur * acc / tot }; });
+    // chunk: break after punctuation or when a chunk gets long
+    c.chunks = []; let cur = [];
+    timed.forEach((tw, i) => {
+      cur.push(tw);
+      const len = cur.map(x => x.w).join(' ').length, nxt = timed[i + 1];
+      if (!nxt || /[,?.]$/.test(tw.w) && len > 8 || len + nxt.w.length > 21 || cur.length >= 4) { c.chunks.push(cur); cur = []; }
+    });
+  }
+}
+function captions(t) {
+  const c = TL.clips.find(c => t >= c.start - 0.05 && t < c.start + c.dur + 0.12);
+  if (!c) return;
+  let ch = c.chunks.find(ch => t < ch[ch.length - 1].e) || c.chunks[c.chunks.length - 1];
+  const y = 1440, font = F(900, 60);
+  g.save(); g.font = font; g.letterSpacing = '0px';
+  const sp = g.measureText(' ').width, ws = ch.map(x => g.measureText(x.w.toUpperCase()).width);
+  const tw = ws.reduce((a, b) => a + b, 0) + sp * (ch.length - 1);
+  const pin = eOut5(prog(t, ch[0].s - 0.04, 0.16));
+  g.translate(CX, y); g.scale(lerp(0.88, 1, pin), lerp(0.88, 1, pin)); g.translate(-CX, -y);
+  rr(CX - tw / 2 - 34, y - 54, tw + 68, 108, 26); g.fillStyle = 'rgba(5,8,16,0.82)'; g.fill();
+  let x = CX - tw / 2;
+  ch.forEach((wd, i) => {
+    const on = t >= wd.s - 0.03;
+    text(wd.w.toUpperCase(), x, y + 3, font, on ? (t < wd.e ? C.amber : C.ink) : 'rgba(245,247,255,.38)', { align: 'left' });
+    x += ws[i] + sp;
+  });
+  g.restore();
+}
+
+// ---------------- frame ----------------
+window.setTimeline = tl => { TL = tl; buildCaptions(); };
+window.renderFrame = (t) => {
+  const si = Math.max(0, TL.scenes.findIndex(s => t >= s.start && t < s.end));
+  const sc = TL.scenes[si], lt = t - sc.start, d = sc.end - sc.start;
+  const hit = Math.exp(-lt * 7);                    // impact energy at every cut
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  g.save();
+  const sh = hit * 16;                              // screen shake
+  g.translate(Math.sin(t * 91) * sh, Math.cos(t * 73) * sh);
+  g.save(); g.translate(W / 2, H / 2); g.scale(1.03 + hit * 0.03, 1.03 + hit * 0.03); g.translate(-W / 2, -H / 2);
+  background(t, hit + (sc.name === 'hook' ? .5 : 0));
+  g.restore();
+  topChip(t);
+  // scene with a quick exit (slide up + fade) and a slow push-in
+  const out = si < TL.scenes.length - 1 ? eIO(prog(lt, d - 0.2, 0.2)) : 0;
+  g.save();
+  const z = 1 + 0.025 * (lt / d);
+  g.translate(CX, 820); g.scale(z, z); g.translate(-CX, -820);
+  g.translate(0, -out * 140); g.globalAlpha = 1 - out;
+  S[sc.name](lt, d, sc);
+  g.restore();
+  captions(t);
+  g.restore();
+  // cut flash
+  if (hit > 0.02 && t > 0.05) { g.fillStyle = `rgba(255,255,255,${hit * 0.13})`; g.fillRect(0, 0, W, H); }
+  // fade from/to black
+  const fin = 1 - prog(t, 0, 0.2), fout = prog(t, TL.duration - 0.45, 0.45);
+  const k = Math.max(fin, fout);
+  if (k > 0) { g.fillStyle = `rgba(0,0,0,${k})`; g.fillRect(0, 0, W, H); }
+};
+
+// Standalone preview: open reel.html over http next to timeline.json to play it live.
+if (!navigator.webdriver) fetch('timeline.json').then(r => r.json()).then(tl => {
+  setTimeline(tl); const t0 = performance.now();
+  (function loop() { renderFrame(((performance.now() - t0) / 1000) % tl.duration); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>
