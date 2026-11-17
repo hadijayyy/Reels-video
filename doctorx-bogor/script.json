@@ -1,0 +1,14 @@
+{
+  "lines": [
+    {"id": "hook",   "scene": "hook",  "text": "Drakor Doctor X ternyata syuting di Bogor? Warganet heboh."},
+    {"id": "what",   "scene": "what",  "text": "Di episode sebelas yang tayang Jumat lalu, Kim Ji Won jadi dokter relawan di desa konflik fiktif bernama Lagota.", "caption": "Di episode 11 yang tayang Jumat lalu, Kim Ji Won jadi dokter relawan di desa konflik fiktif bernama Lagota."},
+    {"id": "clue0",  "scene": "clues", "text": "Tapi warganet langsung menangkap tiga petunjuk."},
+    {"id": "clue1",  "scene": "clues", "text": "Satu, bungkus Indomie di tumpukan sampah."},
+    {"id": "clue2",  "scene": "clues", "text": "Dua, pohon pisang khas kampung kita."},
+    {"id": "clue3",  "scene": "clues", "text": "Tiga, tembok sekolah warna merah putih."},
+    {"id": "loc",    "scene": "loc",   "text": "Lokasinya dilacak ke SD Negeri Mekarwangi, Kecamatan Cariu, Kabupaten Bogor.", "caption": "Lokasinya dilacak ke SDN Mekarwangi, Kecamatan Cariu, Kabupaten Bogor."},
+    {"id": "proof",  "scene": "proof", "text": "Foto di balik layar, termasuk potong tumpeng sebelum syuting, sudah dilihat lebih dari tujuh ratus delapan puluh ribu kali di TikTok.", "caption": "Foto di balik layar, termasuk potong tumpeng sebelum syuting, sudah dilihat lebih dari 780 ribu kali di TikTok."},
+    {"id": "fact",   "scene": "fact",  "text": "Tapi ingat, sampai sekarang belum ada konfirmasi resmi dari pihak produksi."},
+    {"id": "cta",    "scene": "cta",   "text": "Menurut kamu, beneran Bogor atau bukan? Komen di bawah."}
+  ]
+}

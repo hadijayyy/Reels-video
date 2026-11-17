@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Doctor X syuting di Bogor? — reel</title>
+<style>
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; width: 1080px; height: 1920px; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+// Deterministic, time-driven canvas reel. window.renderFrame(t) draws the frame at t seconds.
+const W = 1080, H = 1920, CX = 525;           // CX nudged left: TikTok/Reels button rail sits on the right
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const C = { bg: '#05141A', ink: '#F2FBF9', dim: '#86A3A6', mint: '#35F0C2', red: '#FF4D5E', amber: '#FFD23F', card: '#0E2229', line: '#1E3D45', green: '#2EE6A0' };
+const F = (w, s) => `${w} ${s}px "Inter Display", "Inter", sans-serif`;
+let TL = null;
+
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const prog = (t, a, d) => clamp((t - a) / d);
+const eOut = x => 1 - Math.pow(1 - x, 3);
+const eOut5 = x => 1 - Math.pow(1 - x, 5);
+const eIO = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+const eBack = x => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2); };
+const lerp = (a, b, x) => a + (b - a) * x;
+const rnd = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+
+function text(str, x, y, font, color, o = {}) {
+  g.save();
+  g.font = font; g.fillStyle = color;
+  g.textAlign = o.align || 'center'; g.textBaseline = o.base || 'middle';
+  if (o.ls !== undefined) g.letterSpacing = o.ls + 'px';
+  g.globalAlpha *= o.a === undefined ? 1 : o.a;
+  if (o.glow) { g.shadowColor = o.glow; g.shadowBlur = o.blur || 40; }
+  g.fillText(str, x, y);
+  g.restore();
+}
+function rr(x, y, w, h, r) { g.beginPath(); g.roundRect(x, y, w, h, r); }
+function pop(p, px, py, fn, from = 0.7) {
+  if (p <= 0) return;
+  g.save();
+  const s = lerp(from, 1, eBack(p));
+  g.translate(px, py); g.scale(s, s); g.translate(-px, -py);
+  g.globalAlpha *= clamp(p * 2.5);
+  fn(); g.restore();
+}
+function rise(p, dy, fn) {
+  if (p <= 0) return;
+  g.save(); g.translate(0, (1 - eOut5(p)) * dy); g.globalAlpha *= clamp(p * 2); fn(); g.restore();
+}
+function cross(x, y, s, col) {           // medical cross
+  g.save(); g.fillStyle = col; rr(x - s * .2, y - s * .5, s * .4, s, s * .08); g.fill(); rr(x - s * .5, y - s * .2, s, s * .4, s * .08); g.fill(); g.restore();
+}
+
+// ---------------- ECG motif ----------------
+function ecgY(u) {                        // u in beats; returns -1..1 offset of a PQRST complex
+  const f = u - Math.floor(u);
+  const bump = (c, w, a) => a * Math.exp(-Math.pow((f - c) / w, 2));
+  return bump(.18, .025, .12) - bump(.30, .008, .18) + bump(.33, .012, 1) - bump(.36, .01, .32) + bump(.55, .05, .2);
+}
+function drawECG(y, amp, t, col, alpha, lw = 6, speed = 1) {
+  g.save(); g.globalAlpha *= alpha;
+  g.strokeStyle = col; g.lineWidth = lw; g.lineJoin = 'round'; g.shadowColor = col; g.shadowBlur = 24;
+  const head = ((t * speed * 520) % (W + 400)) - 200;   // sweeping write head
+  g.beginPath();
+  for (let x = 0; x <= W; x += 4) {
+    const yy = y - amp * ecgY(x / 360);
+    x ? g.lineTo(x, yy) : g.moveTo(x, yy);
+  }
+  // fade trail behind the head
+  const gr = g.createLinearGradient(head - 700, 0, head, 0);
+  gr.addColorStop(0, col + '00'); gr.addColorStop(1, col);
+  g.strokeStyle = gr; g.stroke();
+  if (head > 0 && head < W) { g.beginPath(); g.arc(head, y - amp * ecgY(head / 360), 10, 0, 7); g.fillStyle = '#fff'; g.fill(); }
+  g.restore();
+}
+function background(t, heat) {
+  g.fillStyle = C.bg; g.fillRect(0, 0, W, H);
+  let gr = g.createRadialGradient(W * .5, H * .36, 0, W * .5, H * .36, 1100);
+  gr.addColorStop(0, `rgba(53,240,194,${0.08 + 0.10 * heat})`); gr.addColorStop(.6, 'rgba(20,60,90,0.10)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+  // monitor grid
+  g.save(); g.strokeStyle = 'rgba(53,240,194,0.055)'; g.lineWidth = 2;
+  for (let y = 0; y < H; y += 60) { g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+  for (let x = 0; x < W; x += 60) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  g.restore();
+  drawECG(1690, 110, t, C.mint, 0.28, 5);
+  // drifting crosses
+  for (let i = 0; i < 10; i++) {
+    const sp = 30 + rnd(i) * 50, x = 40 + rnd(i + 50) * (W - 80), y = H + 100 - ((rnd(i + 9) * H + t * sp) % (H + 200));
+    g.save(); g.globalAlpha = 0.05 + rnd(i + 20) * 0.07; cross(x, y, 24 + rnd(i + 3) * 26, C.mint); g.restore();
+  }
+  gr = g.createLinearGradient(0, 0, 0, H);
+  gr.addColorStop(0, 'rgba(0,0,0,.55)'); gr.addColorStop(.16, 'rgba(0,0,0,0)'); gr.addColorStop(.72, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.7)');
+  g.fillStyle = gr; g.fillRect(0, 0, W, H);
+}
+function topChip(t) {
+  const y = 250, w = 470, x = CX - w / 2;
+  g.save();
+  rr(x, y - 34, w, 68, 34); g.fillStyle = 'rgba(255,77,94,0.14)'; g.fill();
+  g.strokeStyle = 'rgba(255,77,94,0.6)'; g.lineWidth = 2.5; g.stroke();
+  g.beginPath(); g.arc(x + 42, y, 11, 0, 7); g.fillStyle = C.red; g.globalAlpha = 0.45 + 0.55 * Math.abs(Math.sin(t * 4)); g.fill();
+  g.globalAlpha = 1;
+  text('VIRAL HARI INI · 17 NOV 2026', x + 70, y + 2, F(800, 25), C.ink, { align: 'left', ls: 1.5 });
+  g.restore();
+}
+const clipAt = (sc, id) => TL.clips.find(c => c.id === id).start - sc.start;
+
+// ---------------- scenes (lt = local time, d = scene duration, sc = scene) ----------------
+const S = {};
+
+S.hook = (lt) => {
+  drawECG(700, 170, lt * 1.2, C.mint, clamp(lt * 2) * 0.55, 8, 1.6);
+  const p1 = prog(lt, 0.2, 0.38);
+  if (p1 > 0) {
+    g.save();
+    const s = lerp(2.6, 1, eOut5(p1));
+    g.translate(CX, 560); g.scale(s, s); g.globalAlpha = clamp(p1 * 3);
+    text('DOCTOR X', 0, 0, F(900, 196), C.ink, { ls: -5, glow: 'rgba(53,240,194,.45)', blur: 50 });
+    g.restore();
+  }
+  rise(prog(lt, 0.7, 0.4), 40, () => text('SYUTING DI', CX, 760, F(800, 70), C.dim, { ls: 10 }));
+  const p2 = prog(lt, 1.15, 0.3);
+  if (p2 > 0) {
+    g.save();
+    const s = lerp(2.4, 1, eOut5(p2));
+    g.translate(CX, 940); g.rotate(-0.05); g.scale(s, s); g.globalAlpha = clamp(p2 * 3);
+    rr(-330, -110, 660, 220, 22); g.fillStyle = C.amber; g.shadowColor = C.amber; g.shadowBlur = 60; g.fill();
+    g.shadowBlur = 0;
+    text('BOGOR?', 0, 6, F(900, 150), '#0B1A1F', { ls: -3 });
+    g.restore();
+  }
+  rise(prog(lt, 2.4, 0.5), 40, () => text('drakor SBS · dibintangi Kim Ji Won', CX, 1130, F(600, 40), C.dim));
+};
+
+S.what = (lt, d, sc) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => {
+    g.save(); rr(CX - 210, 420, 420, 84, 42); g.fillStyle = C.mint; g.fill(); g.restore();
+    text('EPISODE 11', CX, 464, F(900, 48), '#06231D', { ls: 4 });
+    text('tayang Jumat, 13 Nov 2026', CX, 560, F(600, 40), C.dim);
+  });
+  // role card
+  const pk = prog(lt, 1.6, 0.45);
+  rise(pk, 80, () => {
+    g.save();
+    rr(CX - 430, 640, 860, 250, 36); g.fillStyle = C.card; g.fill(); g.strokeStyle = C.line; g.lineWidth = 3; g.stroke();
+    rr(CX - 390, 680, 170, 170, 34); g.fillStyle = 'rgba(255,77,94,.15)'; g.fill();
+    cross(CX - 305, 765, 96 * (1 + 0.06 * Math.sin(lt * 6)), C.red);
+    text('Kim Ji Won', CX - 180, 720, F(600, 40), C.dim, { align: 'left' });
+    text('Dokter relawan', CX - 180, 790, F(900, 66), C.ink, { align: 'left', ls: -1 });
+    text('di zona konflik', CX - 180, 852, F(600, 38), C.mint, { align: 'left' });
+    g.restore();
+  });
+  // Lagota
+  const lg = clipAt(sc, 'what') + 4.6;
+  pop(prog(lt, lg, 0.4), CX, 1060, () => {
+    text('desa', CX, 975, F(700, 40), C.dim, { ls: 6 });
+    text('LAGOTA', CX, 1065, F(900, 140), C.ink, { ls: 6, glow: 'rgba(255,255,255,.25)' });
+  });
+  pop(prog(lt, lg + 0.35, 0.35), CX + 330, 990, () => {
+    g.save(); g.translate(CX + 330, 990); g.rotate(0.12);
+    rr(-95, -34, 190, 68, 14); g.fillStyle = C.red; g.fill();
+    text('FIKTIF', 0, 3, F(900, 38), '#fff', { ls: 3 }); g.restore();
+  }, 1.8);
+};
+
+// clue icons
+function iconNoodle(x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.beginPath();
+  g.moveTo(-60, -44); for (let i = 0; i <= 8; i++) g.lineTo(-60 + i * 15, -44 + (i % 2 ? -8 : 0));
+  g.lineTo(60, 44); for (let i = 8; i >= 0; i--) g.lineTo(-60 + i * 15, 44 + (i % 2 ? 8 : 0));
+  g.closePath(); g.fillStyle = '#FFD23F'; g.fill();
+  rr(-44, -26, 88, 52, 10); g.fillStyle = '#E53935'; g.fill();
+  g.strokeStyle = '#fff'; g.lineWidth = 5; g.beginPath();
+  for (let i = 0; i < 3; i++) { g.moveTo(-30, -10 + i * 10); g.bezierCurveTo(-15, -18 + i * 10, 0, -2 + i * 10, 30, -10 + i * 10); }
+  g.stroke(); g.restore();
+}
+function iconBanana(x, y, s, t) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.fillStyle = '#7A5A2E'; rr(-8, -10, 16, 76, 6); g.fill();
+  g.fillStyle = '#3CCB6E';
+  [[-1, -0.6], [1, -0.5], [-1, 0.2], [1, 0.3], [0, -1.4]].forEach(([dir, a], i) => {
+    g.save(); g.translate(0, -12); g.rotate(a * 0.9 + dir * 0.1 + Math.sin(t * 2 + i) * 0.05);
+    g.beginPath(); g.ellipse(dir * 34 || 0, dir ? 0 : -30, dir ? 40 : 14, dir ? 13 : 38, 0, 0, 7); g.fill(); g.restore();
+  });
+  g.restore();
+}
+function iconWall(x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  rr(-64, -50, 128, 100, 8); g.save(); g.clip();
+  g.fillStyle = '#F2F2F2'; g.fillRect(-64, -50, 128, 50);
+  g.fillStyle = '#E53935'; g.fillRect(-64, 0, 128, 50);
+  g.strokeStyle = 'rgba(0,0,0,.15)'; g.lineWidth = 2;
+  for (let r = 0; r < 4; r++) for (let c = -1; c < 4; c++) g.strokeRect(-64 + c * 40 + (r % 2) * 20, -50 + r * 25, 40, 25);
+  g.restore(); g.restore();
+}
+const CLUES = [
+  ['noodle', 'Bungkus Indomie', 'di tumpukan sampah'],
+  ['banana', 'Pohon pisang', 'khas kampung Indonesia'],
+  ['wall', 'Tembok merah-putih', 'khas sekolah negeri'],
+];
+S.clues = (lt, d, sc) => {
+  const st = ['clue1', 'clue2', 'clue3'].map(id => clipAt(sc, id) - 0.05);
+  pop(prog(lt, 0.12, 0.4), CX, 450, () => {
+    // magnifier
+    g.save(); g.strokeStyle = C.amber; g.lineWidth = 14; g.lineCap = 'round';
+    g.beginPath(); g.arc(CX - 380, 440, 46, 0, 7); g.stroke(); g.beginPath(); g.moveTo(CX - 347, 473); g.lineTo(CX - 310, 510); g.stroke(); g.restore();
+    text('3 PETUNJUK', CX + 70, 455, F(900, 120), C.amber, { ls: -3, glow: 'rgba(255,210,63,.4)' });
+  });
+  rise(prog(lt, 0.8, 0.4), 30, () => text('yang bikin warganet curiga', CX, 580, F(600, 40), C.dim));
+  CLUES.forEach(([ic, title, sub], i) => {
+    const p = prog(lt, st[i], 0.42);
+    if (p <= 0) return;
+    const nxt = i < 2 ? st[i + 1] : 1e9, active = lt < nxt, dimP = active ? 0 : eOut(prog(lt, nxt, 0.3));
+    const y = 680 + i * 222, x = CX - 430, w = 860, h = 190;
+    g.save();
+    g.translate((1 - eOut5(p)) * 700, 0);
+    g.globalAlpha *= clamp(p * 2) * lerp(1, 0.55, dimP);
+    rr(x, y, w, h, 32); g.fillStyle = C.card; g.fill();
+    g.strokeStyle = active ? C.mint : C.line; g.lineWidth = active ? 5 : 3;
+    if (active) { g.shadowColor = C.mint; g.shadowBlur = 36; } g.stroke(); g.shadowBlur = 0;
+    rr(x + 30, y + 30, 130, 130, 28); g.fillStyle = '#163840'; g.fill();
+    const bob = active ? Math.sin((lt - st[i]) * 5) * 4 : 0;
+    if (ic === 'noodle') iconNoodle(x + 95, y + 95 + bob, 0.85);
+    if (ic === 'banana') iconBanana(x + 95, y + 92 + bob, 0.95, lt);
+    if (ic === 'wall') iconWall(x + 95, y + 95 + bob, 0.82);
+    text(String(i + 1), x + w - 60, y + 95, F(900, 90), active ? C.mint : '#2A4A52');
+    text(title, x + 195, y + 72, F(900, 54), C.ink, { align: 'left', ls: -1 });
+    text(sub, x + 195, y + 135, F(500, 36), C.dim, { align: 'left' });
+    g.restore();
+  });
+};
+
+S.loc = (lt) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => text('LOKASI DILACAK KE', CX, 440, F(800, 54), C.dim, { ls: 7 }));
+  // abstract map card
+  rise(prog(lt, 0.25, 0.5), 80, () => {
+    g.save();
+    rr(CX - 430, 520, 860, 560, 40); g.fillStyle = '#0B1D22'; g.fill(); g.strokeStyle = C.line; g.lineWidth = 3; g.stroke();
+    g.beginPath(); rr(CX - 430, 520, 860, 560, 40); g.clip();
+    // roads + contours
+    g.strokeStyle = 'rgba(53,240,194,.10)'; g.lineWidth = 3;
+    for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(CX + 120, 780, 80 + i * 70, 50 + i * 45, -0.3, 0, 7); g.stroke(); }
+    g.strokeStyle = 'rgba(242,251,249,.22)'; g.lineWidth = 10; g.lineCap = 'round';
+    const pr = eIO(prog(lt, 0.4, 1.4));
+    g.setLineDash([1400 * pr, 2000]);
+    g.beginPath(); g.moveTo(CX - 460, 1000); g.bezierCurveTo(CX - 200, 900, CX - 100, 700, CX + 40, 760); g.bezierCurveTo(CX + 160, 820, CX + 300, 640, CX + 460, 600); g.stroke();
+    g.beginPath(); g.moveTo(CX - 120, 520); g.bezierCurveTo(CX - 60, 650, CX + 20, 720, CX + 40, 760); g.lineTo(CX + 60, 1080); g.stroke();
+    g.setLineDash([]);
+    text('Jakarta ↑', CX - 400, 580, F(700, 30), C.dim, { align: 'left', a: .8 });
+    text('JAWA BARAT', CX + 400, 1045, F(800, 28), C.dim, { align: 'right', ls: 4, a: .8 });
+    g.restore();
+  });
+  // pin drop
+  const pd = prog(lt, 1.2, 0.5);
+  if (pd > 0) {
+    const py = lerp(560, 770, eOut5(pd)), px = CX + 40;
+    const ring = prog(lt, 1.6, 1.2);
+    g.save();
+    if (ring > 0) { for (let k = 0; k < 2; k++) { const r = ((lt - 1.6 + k * .6) % 1.2) / 1.2; g.beginPath(); g.ellipse(px, 775, 30 + r * 130, 12 + r * 50, 0, 0, 7); g.strokeStyle = `rgba(255,77,94,${0.7 * (1 - r)})`; g.lineWidth = 5; g.stroke(); } }
+    g.translate(px, py); g.globalAlpha = clamp(pd * 3);
+    g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(-20, -40, -56, -62, -56, -100); g.arc(0, -100, 56, Math.PI, 0); g.bezierCurveTo(56, -62, 20, -40, 0, 0);
+    g.fillStyle = C.red; g.shadowColor = C.red; g.shadowBlur = 40; g.fill(); g.shadowBlur = 0;
+    g.beginPath(); g.arc(0, -100, 22, 0, 7); g.fillStyle = '#fff'; g.fill();
+    g.restore();
+  }
+  pop(prog(lt, 2.0, 0.4), CX, 1190, () => text('SDN MEKARWANGI', CX, 1190, F(900, 100), C.ink, { ls: -2, glow: 'rgba(255,255,255,.2)' }));
+  rise(prog(lt, 2.8, 0.4), 30, () => text('Kec. Cariu · Kab. Bogor', CX, 1290, F(800, 50), C.amber));
+};
+
+function tumpeng(x, y, s) {
+  g.save(); g.translate(x, y); g.scale(s, s);
+  g.beginPath(); g.ellipse(0, 70, 150, 34, 0, 0, 7); g.fillStyle = '#2D8A4E'; g.fill();          // banana-leaf tray
+  g.beginPath(); g.moveTo(0, -110); g.bezierCurveTo(30, -100, 90, 30, 104, 64); g.lineTo(-104, 64); g.bezierCurveTo(-90, 30, -30, -100, 0, -110);
+  const gr = g.createLinearGradient(0, -110, 0, 64); gr.addColorStop(0, '#FFE680'); gr.addColorStop(1, '#F2B705');
+  g.fillStyle = gr; g.fill();
+  g.beginPath(); g.moveTo(-12, -108); g.lineTo(0, -140); g.lineTo(12, -108); g.fillStyle = '#E53935'; g.fill();   // chili cap
+  [[-110, 50, '#C0392B'], [118, 46, '#8E5A2B'], [-60, 82, '#F5F5F5'], [70, 84, '#E67E22']].forEach(([a, b, c]) => { g.beginPath(); g.arc(a, b, 20, 0, 7); g.fillStyle = c; g.fill(); });
+  g.restore();
+}
+S.proof = (lt) => {
+  rise(prog(lt, 0.1, 0.45), 60, () => text('FOTO BALIK LAYAR', CX, 430, F(800, 56), C.dim, { ls: 7 }));
+  // phone mockup
+  rise(prog(lt, 0.3, 0.55), 120, () => {
+    g.save();
+    const x = CX - 220, y = 500, w = 440, h = 640;
+    rr(x, y, w, h, 56); g.fillStyle = '#0A0F12'; g.fill(); g.strokeStyle = '#3A5960'; g.lineWidth = 6; g.stroke();
+    rr(x + 18, y + 18, w - 36, h - 36, 42); g.save(); g.clip();
+    const gr = g.createLinearGradient(0, y, 0, y + h); gr.addColorStop(0, '#16353B'); gr.addColorStop(1, '#0A1A1E'); g.fillStyle = gr; g.fillRect(x, y, w, h);
+    tumpeng(CX, y + 300, 1.15 + 0.03 * Math.sin(lt * 3));
+    text('potong tumpeng', CX, y + 450, F(800, 34), C.ink);
+    text('sebelum syuting', CX, y + 492, F(600, 28), C.dim);
+    // side rail
+    text('♥', x + w - 62, y + 560, F(900, 50), C.red); text('68,4RB', x + w - 62, y + 600, F(800, 22), C.ink);
+    text('TikTok', x + 50, y + 70, F(800, 26), C.ink, { align: 'left', a: .8 });
+    g.restore(); g.restore();
+  });
+  // views counter
+  const pc = prog(lt, 1.4, 2.6), v = Math.round(784 * eOut(pc));
+  pop(prog(lt, 1.3, 0.4), CX, 1250, () => {
+    g.save(); rr(CX - 360, 1180, 720, 140, 70); g.fillStyle = 'rgba(53,240,194,.12)'; g.fill(); g.strokeStyle = C.mint; g.lineWidth = 4; g.stroke(); g.restore();
+    // eye icon
+    g.save(); g.translate(CX - 270, 1250); g.strokeStyle = C.mint; g.lineWidth = 7;
+    g.beginPath(); g.moveTo(-40, 0); g.quadraticCurveTo(0, -38, 40, 0); g.quadraticCurveTo(0, 38, -40, 0); g.stroke();
+    g.beginPath(); g.arc(0, 0, 12, 0, 7); g.fillStyle = C.mint; g.fill(); g.restore();
+    text(v + 'RB views', CX + 40, 1254, F(900, 72), C.ink, { ls: -1 });
+  });
+};
+
+S.fact = (lt) => {
+  rise(prog(lt, 0.1, 0.4), 50, () => text('TAPI INGAT', CX, 480, F(900, 76), C.dim, { ls: 10 }));
+  const p = prog(lt, 0.5, 0.3);
+  if (p > 0) {
+    g.save();
+    const s = lerp(2.3, 1, eOut5(p));
+    g.translate(CX, 740); g.rotate(-0.06); g.scale(s, s); g.globalAlpha = clamp(p * 3);
+    rr(-440, -150, 880, 300, 26); g.strokeStyle = C.red; g.lineWidth = 14; g.shadowColor = C.red; g.shadowBlur = 50; g.stroke(); g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,77,94,.12)'; g.fill();
+    text('BELUM', 0, -50, F(900, 120), C.red, { ls: 4 });
+    text('DIKONFIRMASI', 0, 72, F(900, 96), C.red, { ls: 2 });
+    g.restore();
+  }
+  rise(prog(lt, 1.6, 0.45), 40, () => {
+    text('Pihak produksi belum memberi', CX, 1000, F(600, 42), C.ink);
+    text('pernyataan resmi soal lokasi', CX, 1056, F(600, 42), C.ink);
+    text('Masih berdasarkan penelusuran warganet', CX, 1140, F(500, 34), C.dim);
+  });
+};
+
+S.cta = (lt) => {
+  pop(prog(lt, 0.12, 0.4), CX, 450, () => text('MENURUT KAMU?', CX, 450, F(900, 104), C.ink, { ls: -2 }));
+  const btn = (p, y, col, label, ph) => pop(p, CX, y, () => {
+    const s = 1 + 0.035 * Math.sin(lt * 5 + ph);
+    g.save(); g.translate(CX, y); g.scale(s, s);
+    rr(-400, -95, 800, 190, 40); g.fillStyle = col + '22'; g.fill(); g.strokeStyle = col; g.lineWidth = 6; g.shadowColor = col; g.shadowBlur = 40; g.stroke(); g.shadowBlur = 0;
+    text(label, 0, 4, F(900, 80), col, { ls: -1 });
+    g.restore();
+  });
+  btn(prog(lt, 1.0, 0.4), 660, C.mint, 'BENERAN BOGOR', 0);
+  rise(prog(lt, 1.6, 0.3), 20, () => text('atau', CX, 790, F(700, 44), C.dim));
+  btn(prog(lt, 1.9, 0.4), 920, C.red, 'BUKAN', 2);
+  rise(prog(lt, 2.8, 0.4), 40, () => {
+    const b = Math.abs(Math.sin(lt * 5)) * 14;
+    text('KOMEN DI BAWAH', CX - 30, 1110, F(900, 60), C.amber, { ls: 3 });
+    text('↓', CX + 300, 1110 + b, F(900, 70), C.amber);
+  });
+  rise(prog(lt, 0.8, 0.5), 20, () => {
+    text('Sumber: detikcom (Wolipop), Radar Solo, Liputan6 · 16/11/2026', CX, 1215, F(500, 26), C.dim, { a: .9 });
+    text('Lokasi syuting belum dikonfirmasi resmi', CX, 1250, F(500, 26), C.dim, { a: .9 });
+  });
+};
+
+// ---------------- captions (word-highlighted) ----------------
+const WEIGHT = { '11': 8, 'SDN': 12, '780': 22, 'X': 3 };
+function buildCaptions() {
+  for (const c of TL.clips) {
+    const words = (c.caption || c.text).split(' ');
+    const wts = words.map(w => (WEIGHT[w] || w.length) + 1.2 + (/[,?.]$/.test(w) ? 2.5 : 0));
+    const tot = wts.reduce((a, b) => a + b, 0);
+    let acc = 0;
+    const timed = words.map((w, i) => { const s = c.start + c.dur * acc / tot; acc += wts[i]; return { w, s, e: c.start + c.dur * acc / tot }; });
+    c.chunks = []; let cur = [];
+    timed.forEach((tw, i) => {
+      cur.push(tw);
+      const len = cur.map(x => x.w).join(' ').length, nxt = timed[i + 1];
+      if (!nxt || /[,?.]$/.test(tw.w) && len > 8 || len + nxt.w.length > 21 || cur.length >= 4) { c.chunks.push(cur); cur = []; }
+    });
+  }
+}
+function captions(t) {
+  const c = TL.clips.find(c => t >= c.start - 0.05 && t < c.start + c.dur + 0.12);
+  if (!c) return;
+  let ch = c.chunks.find(ch => t < ch[ch.length - 1].e) || c.chunks[c.chunks.length - 1];
+  const y = 1460, font = F(900, 60);
+  g.save(); g.font = font; g.letterSpacing = '0px';
+  const sp = g.measureText(' ').width, ws = ch.map(x => g.measureText(x.w.toUpperCase()).width);
+  const tw = ws.reduce((a, b) => a + b, 0) + sp * (ch.length - 1);
+  const pin = eOut5(prog(t, ch[0].s - 0.04, 0.16));
+  g.translate(CX, y); g.scale(lerp(0.88, 1, pin), lerp(0.88, 1, pin)); g.translate(-CX, -y);
+  rr(CX - tw / 2 - 34, y - 54, tw + 68, 108, 26); g.fillStyle = 'rgba(3,10,13,0.84)'; g.fill();
+  let x = CX - tw / 2;
+  ch.forEach((wd, i) => {
+    const on = t >= wd.s - 0.03;
+    text(wd.w.toUpperCase(), x, y + 3, font, on ? (t < wd.e ? C.amber : C.ink) : 'rgba(242,251,249,.38)', { align: 'left' });
+    x += ws[i] + sp;
+  });
+  g.restore();
+}
+
+// ---------------- frame ----------------
+window.setTimeline = tl => { TL = tl; buildCaptions(); };
+window.renderFrame = (t) => {
+  const si = Math.max(0, TL.scenes.findIndex(s => t >= s.start && t < s.end));
+  const sc = TL.scenes[si], lt = t - sc.start, d = sc.end - sc.start;
+  const hit = Math.exp(-lt * 7);
+  g.setTransform(1, 0, 0, 1, 0, 0); g.globalAlpha = 1;
+  g.save();
+  const sh = hit * 14;
+  g.translate(Math.sin(t * 91) * sh, Math.cos(t * 73) * sh);
+  g.save(); g.translate(W / 2, H / 2); g.scale(1.03 + hit * 0.03, 1.03 + hit * 0.03); g.translate(-W / 2, -H / 2);
+  background(t, hit + (sc.name === 'hook' ? .5 : 0));
+  g.restore();
+  topChip(t);
+  const out = si < TL.scenes.length - 1 ? eIO(prog(lt, d - 0.2, 0.2)) : 0;
+  g.save();
+  const z = 1 + 0.025 * (lt / d);
+  g.translate(CX, 820); g.scale(z, z); g.translate(-CX, -820);
+  g.translate(0, -out * 140); g.globalAlpha = 1 - out;
+  S[sc.name](lt, d, sc);
+  g.restore();
+  captions(t);
+  g.restore();
+  if (hit > 0.02 && t > 0.05) { g.fillStyle = `rgba(255,255,255,${hit * 0.12})`; g.fillRect(0, 0, W, H); }
+  const fin = 1 - prog(t, 0, 0.2), fout = prog(t, TL.duration - 0.45, 0.45);
+  const k = Math.max(fin, fout);
+  if (k > 0) { g.fillStyle = `rgba(0,0,0,${k})`; g.fillRect(0, 0, W, H); }
+};
+
+if (!navigator.webdriver) fetch('timeline.json').then(r => r.json()).then(tl => {
+  setTimeline(tl); const t0 = performance.now();
+  (function loop() { renderFrame(((performance.now() - t0) / 1000) % tl.duration); requestAnimationFrame(loop); })();
+});
+</script>
+</body>
+</html>
