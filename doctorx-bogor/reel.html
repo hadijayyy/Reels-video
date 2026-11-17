@@ -121,8 +121,8 @@ S.hook = (lt) => {
     text('DOCTOR X', 0, 0, F(900, 196), C.ink, { ls: -5, glow: 'rgba(53,240,194,.45)', blur: 50 });
     g.restore();
   }
-  rise(prog(lt, 0.7, 0.4), 40, () => text('SYUTING DI', CX, 760, F(800, 70), C.dim, { ls: 10 }));
-  const p2 = prog(lt, 1.15, 0.3);
+  rise(prog(lt, 1.6, 0.4), 40, () => text('SYUTING DI', CX, 760, F(800, 70), C.dim, { ls: 10 }));
+  const p2 = prog(lt, 2.2, 0.3);
   if (p2 > 0) {
     g.save();
     const s = lerp(2.4, 1, eOut5(p2));
@@ -132,7 +132,7 @@ S.hook = (lt) => {
     text('BOGOR?', 0, 6, F(900, 150), '#0B1A1F', { ls: -3 });
     g.restore();
   }
-  rise(prog(lt, 2.4, 0.5), 40, () => text('drakor SBS · dibintangi Kim Ji Won', CX, 1130, F(600, 40), C.dim));
+  rise(prog(lt, 3.0, 0.5), 40, () => text('drakor SBS · dibintangi Kim Ji Won', CX, 1130, F(600, 40), C.dim));
 };
 
 S.what = (lt, d, sc) => {
@@ -142,7 +142,7 @@ S.what = (lt, d, sc) => {
     text('tayang Jumat, 13 Nov 2026', CX, 560, F(600, 40), C.dim);
   });
   // role card
-  const pk = prog(lt, 1.6, 0.45);
+  const pk = prog(lt, 1.9, 0.45);
   rise(pk, 80, () => {
     g.save();
     rr(CX - 430, 640, 860, 250, 36); g.fillStyle = C.card; g.fill(); g.strokeStyle = C.line; g.lineWidth = 3; g.stroke();
@@ -154,7 +154,7 @@ S.what = (lt, d, sc) => {
     g.restore();
   });
   // Lagota
-  const lg = clipAt(sc, 'what') + 4.6;
+  const lg = clipAt(sc, 'what') + 4.75;
   pop(prog(lt, lg, 0.4), CX, 1060, () => {
     text('desa', CX, 975, F(700, 40), C.dim, { ls: 6 });
     text('LAGOTA', CX, 1065, F(900, 140), C.ink, { ls: 6, glow: 'rgba(255,255,255,.25)' });
@@ -255,19 +255,19 @@ S.loc = (lt) => {
     g.restore();
   });
   // pin drop
-  const pd = prog(lt, 1.2, 0.5);
+  const pd = prog(lt, 1.3, 0.5);
   if (pd > 0) {
     const py = lerp(560, 770, eOut5(pd)), px = CX + 40;
-    const ring = prog(lt, 1.6, 1.2);
+    const ring = prog(lt, 1.7, 1.2);
     g.save();
-    if (ring > 0) { for (let k = 0; k < 2; k++) { const r = ((lt - 1.6 + k * .6) % 1.2) / 1.2; g.beginPath(); g.ellipse(px, 775, 30 + r * 130, 12 + r * 50, 0, 0, 7); g.strokeStyle = `rgba(255,77,94,${0.7 * (1 - r)})`; g.lineWidth = 5; g.stroke(); } }
+    if (ring > 0) { for (let k = 0; k < 2; k++) { const r = ((lt - 1.7 + k * .6) % 1.2) / 1.2; g.beginPath(); g.ellipse(px, 775, 30 + r * 130, 12 + r * 50, 0, 0, 7); g.strokeStyle = `rgba(255,77,94,${0.7 * (1 - r)})`; g.lineWidth = 5; g.stroke(); } }
     g.translate(px, py); g.globalAlpha = clamp(pd * 3);
     g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(-20, -40, -56, -62, -56, -100); g.arc(0, -100, 56, Math.PI, 0); g.bezierCurveTo(56, -62, 20, -40, 0, 0);
     g.fillStyle = C.red; g.shadowColor = C.red; g.shadowBlur = 40; g.fill(); g.shadowBlur = 0;
     g.beginPath(); g.arc(0, -100, 22, 0, 7); g.fillStyle = '#fff'; g.fill();
     g.restore();
   }
-  pop(prog(lt, 2.0, 0.4), CX, 1190, () => text('SDN MEKARWANGI', CX, 1190, F(900, 100), C.ink, { ls: -2, glow: 'rgba(255,255,255,.2)' }));
+  pop(prog(lt, 1.6, 0.4), CX, 1190, () => text('SDN MEKARWANGI', CX, 1190, F(900, 100), C.ink, { ls: -2, glow: 'rgba(255,255,255,.2)' }));
   rise(prog(lt, 2.8, 0.4), 30, () => text('Kec. Cariu · Kab. Bogor', CX, 1290, F(800, 50), C.amber));
 };
 
@@ -299,7 +299,7 @@ S.proof = (lt) => {
     g.restore(); g.restore();
   });
   // views counter
-  const pc = prog(lt, 1.4, 2.6), v = Math.round(784 * eOut(pc));
+  const pc = prog(lt, 1.4, 2.9), v = Math.round(784 * eOut(pc));
   pop(prog(lt, 1.3, 0.4), CX, 1250, () => {
     g.save(); rr(CX - 360, 1180, 720, 140, 70); g.fillStyle = 'rgba(53,240,194,.12)'; g.fill(); g.strokeStyle = C.mint; g.lineWidth = 4; g.stroke(); g.restore();
     // eye icon
@@ -312,7 +312,7 @@ S.proof = (lt) => {
 
 S.fact = (lt) => {
   rise(prog(lt, 0.1, 0.4), 50, () => text('TAPI INGAT', CX, 480, F(900, 76), C.dim, { ls: 10 }));
-  const p = prog(lt, 0.5, 0.3);
+  const p = prog(lt, 1.15, 0.3);
   if (p > 0) {
     g.save();
     const s = lerp(2.3, 1, eOut5(p));
@@ -323,7 +323,7 @@ S.fact = (lt) => {
     text('DIKONFIRMASI', 0, 72, F(900, 96), C.red, { ls: 2 });
     g.restore();
   }
-  rise(prog(lt, 1.6, 0.45), 40, () => {
+  rise(prog(lt, 2.0, 0.45), 40, () => {
     text('Pihak produksi belum memberi', CX, 1000, F(600, 42), C.ink);
     text('pernyataan resmi soal lokasi', CX, 1056, F(600, 42), C.ink);
     text('Masih berdasarkan penelusuran warganet', CX, 1140, F(500, 34), C.dim);
@@ -339,10 +339,10 @@ S.cta = (lt) => {
     text(label, 0, 4, F(900, 80), col, { ls: -1 });
     g.restore();
   });
-  btn(prog(lt, 1.0, 0.4), 660, C.mint, 'BENERAN BOGOR', 0);
-  rise(prog(lt, 1.6, 0.3), 20, () => text('atau', CX, 790, F(700, 44), C.dim));
-  btn(prog(lt, 1.9, 0.4), 920, C.red, 'BUKAN', 2);
-  rise(prog(lt, 2.8, 0.4), 40, () => {
+  btn(prog(lt, 0.7, 0.4), 660, C.mint, 'BENERAN BOGOR', 0);
+  rise(prog(lt, 1.4, 0.3), 20, () => text('atau', CX, 790, F(700, 44), C.dim));
+  btn(prog(lt, 1.55, 0.4), 920, C.red, 'BUKAN', 2);
+  rise(prog(lt, 2.1, 0.4), 40, () => {
     const b = Math.abs(Math.sin(lt * 5)) * 14;
     text('KOMEN DI BAWAH', CX - 30, 1110, F(900, 60), C.amber, { ls: 3 });
     text('↓', CX + 300, 1110 + b, F(900, 70), C.amber);

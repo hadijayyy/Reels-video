@@ -157,16 +157,16 @@ for s in tl["scenes"]:
 clip = {c["id"]: c for c in tl["clips"]}
 for k in range(4):                                                # heart-monitor beeps under the title
     place(sfx, beep(), 0.25 + k * 0.5, 0.35)
-place(sfx, impact(), 1.15, 0.75)                                  # BOGOR? stamp
-place(sfx, riser(drop - 2.2), 2.2, 0.3)
-place(sfx, impact(), scene_start["what"] + clip["what"]["start"] - scene_start["what"] + 4.6, 0.45)  # LAGOTA
+place(sfx, impact(), 2.2, 0.75)                                   # BOGOR? stamp
+place(sfx, riser(drop - 2.4), 2.4, 0.3)
+place(sfx, impact(), clip["what"]["start"] + 4.75, 0.45)          # LAGOTA
 for cid in ("clue1", "clue2", "clue3"):
     place(sfx, impact(), clip[cid]["start"], 0.45)
     place(sfx, tick(), clip[cid]["start"], 0.5)
-place(sfx, impact(), scene_start["loc"] + 1.55, 0.55)             # pin lands
+place(sfx, impact(), scene_start["loc"] + 1.65, 0.55)             # pin lands
 for k in range(26):                                               # view counter roll
-    place(sfx, tick(), scene_start["proof"] + 1.4 + k * 0.1 * (1 + k / 26), 0.22)
-place(sfx, impact(), scene_start["fact"] + 0.55, 0.85)            # BELUM DIKONFIRMASI stamp
+    place(sfx, tick(), scene_start["proof"] + 1.4 + k * 0.075 * (1 + k / 26), 0.22)
+place(sfx, impact(), scene_start["fact"] + 1.2, 0.85)            # BELUM DIKONFIRMASI stamp
 
 # ---------- voice ----------
 vo = np.zeros(N, dtype=np.float64)

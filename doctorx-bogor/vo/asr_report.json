@@ -1,0 +1,52 @@
+{
+ "hook": {
+  "score": 0.909,
+  "seed": 7,
+  "heard": "Drama Korea Dr. X ternyata shooting di Bogor, warganet pun heboh."
+ },
+ "what": {
+  "score": 0.995,
+  "seed": 42,
+  "heard": "Di episode 11 yang tayang jumat lalu, Kim Jiwon jadi doktere lawan di desa konflik fiktif bernama Lagota."
+ },
+ "clue0": {
+  "score": 1.0,
+  "seed": 7,
+  "heard": "Tapi warganet langsung menangkap tiga petunjuk."
+ },
+ "clue1": {
+  "score": 1.0,
+  "seed": 7,
+  "heard": "Satu bungkus Indomie ditumpukan sampah."
+ },
+ "clue2": {
+  "score": 1.0,
+  "seed": 1234,
+  "heard": "2. Pohon pisang khas kampung kita"
+ },
+ "clue3": {
+  "score": 1.0,
+  "seed": 7,
+  "heard": "Tiga tembok sekolah warna merah putih"
+ },
+ "loc": {
+  "score": 1.0,
+  "seed": 7,
+  "heard": "Lokasinya dilacak ke SD Negeri Mekarwangi Kecamatan Cariu, Kabupaten Bogor."
+ },
+ "proof": {
+  "score": 0.879,
+  "seed": 7,
+  "heard": "Foto di balik layar, termasuk potong tumpang sebelum shooting, sudah dilihat lebih dari 780 ribu kali di TikTok."
+ },
+ "fact": {
+  "score": 1.0,
+  "seed": 7,
+  "heard": "Tapi ingat, sampai sekarang belum ada konfirmasi resmi dari pihak produksi."
+ },
+ "cta": {
+  "score": 1.0,
+  "seed": 99,
+  "heard": "menurut kamu beneran bogor atau bukan? komen di bawah"
+ }
+}

@@ -17,3 +17,10 @@ Drakor Doctor X syuting di Bogor?! 😳 Di episode 11, warganet nemu bungkus Ind
 - The video doesn't claim that Kim Ji Won came to Indonesia, because no source confirms it.
 - View count: the voiceover says "lebih dari 780 ribu" and the screen shows "784RB views", the figure as of detik's article. The number will have grown since.
 - The map, phone mockup and icons are stylised illustrations. The video uses no footage, stills or logos from the drama.
+
+**Voiceover:**
+- The voice is generated with OmniVoice, the engine behind [VoiceStudio](https://github.com/debpalash/VoiceStudio), using voice design ("male, young adult, moderate pitch") at speed 1.1. See `make_vo_omnivoice.py`.
+- Every line was transcribed back with Whisper and regenerated with another seed when it didn't match the script. The per-line results are in `vo/asr_report.json`.
+- The opening line is spoken as "Drama Korea Doktor Eks…", because the model garbled the shorter "Drakor Doctor X…".
+- "Cariu" is spelled "Chariu" in the TTS text (field `tts` in `script.json`), because the model otherwise says "Karyu".
+- For `proof`, Whisper writes "tumpang". The same thing happens with a reference voice that pronounces "tumpeng" correctly, so it is a Whisper error, not a mispronunciation.

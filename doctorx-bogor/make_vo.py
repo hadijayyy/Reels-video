@@ -1,22 +1,19 @@
-"""Generate Indonesian voiceover clips (gTTS), speed them up, and build the timeline."""
+"""Polish the OmniVoice clips (vo/<id>.ov.wav from make_vo_omnivoice.py) and build the timeline."""
 import json, subprocess, pathlib
-from gtts import gTTS
 
 ROOT = pathlib.Path(__file__).parent
-TEMPO = 1.3           # gTTS is slow by default
 LEAD, GAP, TAIL = 0.3, 0.16, 0.9
 
 script = json.loads((ROOT / "script.json").read_text())
 t = LEAD
 clips = []
 for ln in script["lines"]:
-    raw = ROOT / "vo" / f"{ln['id']}.mp3"
+    raw = ROOT / "vo" / f"{ln['id']}.ov.wav"
     wav = ROOT / "vo" / f"{ln['id']}.wav"
-    if not raw.exists():
-        gTTS(ln["text"], lang="id").save(str(raw))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(raw), "-af",
         f"silenceremove=start_periods=1:start_threshold=-45dB,areverse,"
-        f"silenceremove=start_periods=1:start_threshold=-45dB,areverse,atempo={TEMPO}",
+        f"silenceremove=start_periods=1:start_threshold=-45dB,areverse,"
+        f"highpass=f=80,equalizer=f=3500:t=q:w=1:g=2,acompressor=threshold=-18dB:ratio=3:attack=5:release=80",
         "-ar", "44100", "-ac", "1", str(wav)], check=True)
     dur = float(subprocess.check_output(["ffprobe", "-v", "error", "-show_entries",
         "format=duration", "-of", "csv=p=0", str(wav)]))
